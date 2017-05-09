@@ -2,8 +2,12 @@ package main
 
 import (
 	"flag"
+	"io"
 	"os"
+	"os/exec"
 	"text/template"
+
+	"github.com/joncalhoun/pipe"
 )
 
 type data struct {
@@ -17,8 +21,16 @@ func main() {
 	flag.StringVar(&d.Name, "name", "", "The name used for the queue being generated. This should start with a capital letter so that it is exported.")
 	flag.Parse()
 
+	// Create our template + other commands we want to run
 	t := template.Must(template.New("queue").Parse(queueTemplate))
-	t.Execute(os.Stdout, d)
+
+	rc, wc, _ := pipe.Commands(
+		exec.Command("gofmt"),
+		exec.Command("goimports"),
+	)
+	t.Execute(wc, d)
+	wc.Close()
+	io.Copy(os.Stdout, rc)
 }
 
 var queueTemplate = `
