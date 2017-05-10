@@ -23,11 +23,18 @@ func main() {
 
 	// Create our template + other commands we want to run
 	t := template.Must(template.New("queue").Parse(queueTemplate))
-
-	rc, wc, _ := pipe.Commands(
+	rc, wc, errCh := pipe.Commands(
 		exec.Command("gofmt"),
 		exec.Command("goimports"),
 	)
+	go func() {
+		select {
+		case err, ok := <-errCh:
+			if ok && err != nil {
+				panic(err)
+			}
+		}
+	}()
 	t.Execute(wc, d)
 	wc.Close()
 	io.Copy(os.Stdout, rc)
